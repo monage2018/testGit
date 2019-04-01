@@ -1,0 +1,22 @@
+{
+  "name": "locatealgorithm",
+  "version": "1.0.0",
+  "description": "a location algorithm",
+  "main": "./dist/locationService.js",
+  "dependencies": {
+    "mathjs": "^5.8.0",
+    "typescript": "^3.4.1"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "start": "tsc -w",
+    "build": "tsc"
+  },
+  "repository": {
+    "type": "git",
+    "url": "http://bitbucket.corelink.vip:7990/scm/rtlal/locatealgorithm.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
