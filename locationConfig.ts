@@ -43,8 +43,8 @@ export const PVAKalmanFilterConfig = {
 }
 
 export const GatewayConfig = {
-    "b4e62d8cd185": {
-        mac: "b4e62d8cd185",
+    "b4e62d8cd141": {
+        mac: "b4e62d8cd141",
         name: "实验室",
         coordinates: [3.52, 2.74],
         mode: 1,
@@ -52,8 +52,8 @@ export const GatewayConfig = {
         A: -62,
         n: 2.5,
     },
-    "b4e62d8cd18d": {
-        mac: "b4e62d8cd18d",
+    "b4e62d8cd0f1": {
+        mac: "b4e62d8cd0f1",
         name: "会议室",
         coordinates: [-0.31, 2.74],
         mode: 1,
@@ -61,8 +61,8 @@ export const GatewayConfig = {
         A: -62,
         n: 2.5,
     },
-    "b4e62d8cd0bd": {
-        mac: "b4e62d8cd0bd",
+    "b4e62d8cd16d": {
+        mac: "b4e62d8cd16d",
         name: "主室",
         coordinates: [0, -1.50],
         mode: 1,
