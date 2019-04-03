@@ -15,7 +15,9 @@ import { Gateway } from "./gateway";
 
 export class LocationService {
     iBeaconAndGatewayMacMap: Object;
-    rssiKalmanFilter: Object;
+    rssiKalmanFilter: {
+        [iBeaconAndGatewayMac: string]: RSSIKalmanFilter,
+    };
     pvaKalmanFilter: Object;
     iBeaconInfo: Object;
     regionInfo: Object;
@@ -30,10 +32,38 @@ export class LocationService {
         this.gatewayInfo = {};
         this.addRegion(RegionConfig);
         this.addGateway(GatewayConfig);
+        Object.keys(this.gatewayInfo).forEach(mac => {
+            this.regionInfo[this.gatewayInfo[mac].region].addGateway(mac);
+        })
     }
 
     locate(iBeaconMac: string, gatewayMac: string[], rssiDataTable: number[][]): number[][] {
-        this.iBeaconAndGatewayMacMap[iBeaconMac] = gatewayMac;
+        let rawM = rssiDataTable[0].length;
+        let rawN = gatewayMac.length;
+        if(!this.iBeaconInfo[iBeaconMac]){
+            this.iBeaconInfo[iBeaconMac] = {};
+        }
+        if(!this.iBeaconInfo[iBeaconMac].gateways){
+            this.iBeaconInfo[iBeaconMac].gateways = [];
+        }else{
+            let lastGateways = this.iBeaconInfo[iBeaconMac].gateways.map(x => {
+                let g = {};
+                Object.keys(x).filter(v => !gatewayMac.includes(v)).map(v1 => g[v1] = x[v1]);
+                return g;
+            }).reduce((a, b) => {
+                Object.keys(b).forEach(v => a[v] = b[v]);
+                return a;
+            });
+            gatewayMac = gatewayMac.concat(Object.keys(lastGateways));
+            Object.values(lastGateways).forEach(v => {
+                let newRssi = [];
+                for(let j = 0; j < rawM; j++){
+                    newRssi.push(v);
+                }
+                rssiDataTable.push(newRssi);
+            })
+        }
+        
         let N = gatewayMac.length; // 网关个数
         let M = rssiDataTable[0].length; // 组数
         let coordinates: number[][] = []; // 各网关位置
@@ -70,9 +100,6 @@ export class LocationService {
         })
 
         for (let j = 0; j < M; j++) {
-            if (j === 52) {
-                let debug = 1;
-            }
             // 不同模式加权平均
             let wd: number[] = A.map((value, i) => {
                 return 1. / 10 ** ((value - rssiKF[i][j]) / 25.);
@@ -134,12 +161,11 @@ export class LocationService {
             }
             // 模式切换
             let modeSwitch1d: boolean = false;
-            if (!this.iBeaconInfo[iBeaconMac]) {
-                this.iBeaconInfo[iBeaconMac] = {};
+            if (!this.iBeaconInfo[iBeaconMac].lastMode) {
                 this.iBeaconInfo[iBeaconMac].lastMode = nowMode;
                 this.iBeaconInfo[iBeaconMac].modeContinueNum = 0;
                 this.iBeaconInfo[iBeaconMac].regionContinueNum = 0;
-            } else if (nowMode != this.iBeaconInfo[iBeaconMac].lastMode) {
+            } else if (nowMode !== this.iBeaconInfo[iBeaconMac].lastMode) {
                 this.iBeaconInfo[iBeaconMac].modeContinueNum += 1;
                 if (this.iBeaconInfo[iBeaconMac].modeContinueNum >= ThresholdConfig.MODESWITCH) {
                     this.iBeaconInfo[iBeaconMac].modeContinueNum = 0;
@@ -161,10 +187,10 @@ export class LocationService {
             if (!this.iBeaconInfo[iBeaconMac].lastRegion) {
                 this.iBeaconInfo[iBeaconMac].lastRegion = nowRegion;
                 this.iBeaconInfo[iBeaconMac].continueRegionId = nowRegion;
-            } else if (nowRegion != this.iBeaconInfo[iBeaconMac].lastRegion) {
+            } else if (nowRegion !== this.iBeaconInfo[iBeaconMac].lastRegion) {
                 if (this.iBeaconInfo[iBeaconMac].regionContinueNum === 0) {
                     this.iBeaconInfo[iBeaconMac].regionContinueNum += 1;
-                } else if (nowRegion != this.iBeaconInfo[iBeaconMac].continueRegionId) {
+                } else if (nowRegion !== this.iBeaconInfo[iBeaconMac].continueRegionId) {
                     this.iBeaconInfo[iBeaconMac].continueRegionId = nowRegion;
                     this.iBeaconInfo[iBeaconMac].regionContinueNum = 1;
                 } else if (nowRegion === this.iBeaconInfo[iBeaconMac].continueRegionId) {
@@ -193,7 +219,7 @@ export class LocationService {
             if (!this.iBeaconInfo[iBeaconMac].d) {
                 this.iBeaconInfo[iBeaconMac].d = [];
             }
-            this.iBeaconInfo[iBeaconMac].d.push(gatewayD);
+            this.iBeaconInfo[iBeaconMac].d.push(gatewayMac.map((mac, i) => {mac: gatewayD[i]}));
             let gatewayFilter: number[] = [];
             if (nowMode === 0) {
                 let gatewayFilterAll: number[] = sortMode[0].sort((a, b) => { return gatewayD[a] - gatewayD[b]; });
@@ -220,6 +246,9 @@ export class LocationService {
                 }
                 gatewayFilter = gatewayFilter.sort((a, b) => { return gatewayD[a] - gatewayD[b]; });
             }
+            if(!gatewayFilter.length){
+                gatewayFilter = gatewayD.map((d, i) => { return i; }).sort((a, b) => { return gatewayD[a] - gatewayD[b]; });
+            }
             let chooseNum: number = Math.min(ThresholdConfig.GATEWAYLOCATIONNUMBER, gatewayFilter.length);
             let choosePoints: number[][] = [];
             let chooseD: number[] = [];
@@ -237,12 +266,6 @@ export class LocationService {
             choosePoints = math.transpose(choosePoints).valueOf();
 
             // 拟牛顿法求iBeacon坐标
-            if(chooseNum < 2){
-                if(this.iBeaconInfo[iBeaconMac] && this.iBeaconInfo[iBeaconMac].viewPoint){
-                    return [this.iBeaconInfo[iBeaconMac].viewPoint[this.iBeaconInfo[iBeaconMac].viewPoint.length-1]];
-                }
-                return [];
-            }
             let lossFunc = new LossFunction(choosePoints, chooseD, chooseWd);
             let x0 = [[1], [1]];
             let result = BFGS(lossFunc.f, lossFunc.gf, x0)[0];
@@ -277,6 +300,9 @@ export class LocationService {
             }
             this.iBeaconInfo[iBeaconMac].pvaSol.push([pvaSol[0][0], pvaSol[1][0]]);
         }
+
+        // 指数加权滑动平均
+        this.ewma(iBeaconMac);
 
         // 卷积平滑处理
         let k = 0;
@@ -330,10 +356,11 @@ export class LocationService {
 
             // 加权位移
             if (this.regionInfo[convSolRegion].weightMove) {
-                let regionGatewayId = region.indexOf(convSolRegion)
-                let regionGatewayCoor = coordinates[regionGatewayId];
-                let convD = this.iBeaconInfo[iBeaconMac].d.slice(k, kEnd).reduce((meanValue, sols) => {
-                    meanValue += coef * sols[regionGatewayId];
+                let regionGatewayMac = this.regionInfo[convSolRegion].getGateway()[0];
+                let regionGatewayCoor = this.gatewayInfo[regionGatewayMac].coordinates;
+                let convD = this.iBeaconInfo[iBeaconMac].d.slice(k, kEnd).filter(val => {
+                    return val.hasOwnProperty(regionGatewayMac)}).reduce((meanValue, sols, arg) => {          
+                    meanValue += sols[regionGatewayMac] / arg.length;
                     return meanValue;
                 }, 0.);
                 let distanceToGateway = Math.sqrt((convSol[0] - regionGatewayCoor[0]) ** 2
@@ -364,7 +391,7 @@ export class LocationService {
             }
             let distance = Math.sqrt((convSolRegionLimit[0] - this.iBeaconInfo[iBeaconMac].lastView.point[0]) ** 2
                 + (convSolRegionLimit[1] - this.iBeaconInfo[iBeaconMac].lastView.point[1]) ** 2);
-            if (distance > ThresholdConfig.FOOTSTEP || convSolRegion != this.iBeaconInfo[iBeaconMac].lastView.region) {
+            if (distance > ThresholdConfig.FOOTSTEP || convSolRegion !== this.iBeaconInfo[iBeaconMac].lastView.region) {
                 this.iBeaconInfo[iBeaconMac].lastView = {
                     point: [convSolRegionLimit[0], convSolRegionLimit[1]],
                     mode: convSolMode,
@@ -375,29 +402,42 @@ export class LocationService {
             }
         }
 
-        if (k > 0) {
+        if (endK > 0) {
             this.iBeaconInfo[iBeaconMac].sol.splice(0, k);
             this.iBeaconInfo[iBeaconMac].pvaSol.splice(0, k);
-            this.iBeaconInfo[iBeaconMac].convSol.splice(0, k);
-            this.iBeaconInfo[iBeaconMac].convSolRegionLimit.splice(0, k);
             this.iBeaconInfo[iBeaconMac].mode.splice(0, k);
             this.iBeaconInfo[iBeaconMac].region.splice(0, k);
             this.iBeaconInfo[iBeaconMac].d.splice(0, k);
         }
 
-        // console.log('vp', this.iBeaconInfo[iBeaconMac].viewPoint);
-
-        if (!viewPointReturn.length && this.iBeaconInfo[iBeaconMac].viewPoint) {
-            // console.log("vpend", [this.iBeaconInfo[iBeaconMac].viewPoint[this.iBeaconInfo[iBeaconMac].viewPoint.length - 1]]);
-            viewPointReturn = [this.iBeaconInfo[iBeaconMac].viewPoint[this.iBeaconInfo[iBeaconMac].viewPoint.length - 1]];
+        if (!viewPointReturn.length) {
+            if(this.iBeaconInfo[iBeaconMac].viewPoint){
+                viewPointReturn = [this.iBeaconInfo[iBeaconMac].viewPoint[this.iBeaconInfo[iBeaconMac].viewPoint.length - 1]];
+            }else {
+                viewPointReturn = [this.iBeaconInfo[iBeaconMac].pvaSol[this.iBeaconInfo[iBeaconMac].pvaSol.length - 1]];
+            }
+        }
+        if(this.iBeaconInfo[iBeaconMac].convSol && this.iBeaconInfo[iBeaconMac].convSol.length > ThresholdConfig.GROUPSAVENUM){
+            this.iBeaconInfo[iBeaconMac].convSol = this.iBeaconInfo[iBeaconMac].convSol.slice(-ThresholdConfig.GROUPSAVENUM);
+            this.iBeaconInfo[iBeaconMac].convSolRegionLimit = this.iBeaconInfo[iBeaconMac].convSolRegionLimit
+                .slice(-ThresholdConfig.GROUPSAVENUM);
+        }
+        if(this.iBeaconInfo[iBeaconMac].viewPoint && this.iBeaconInfo[iBeaconMac].viewPoint.length > ThresholdConfig.GROUPSAVENUM){
+            this.iBeaconInfo[iBeaconMac].viewPoint = this.iBeaconInfo[iBeaconMac].viewPoint.slice(-ThresholdConfig.GROUPSAVENUM);
         }
 
-        if(this.iBeaconInfo[iBeaconMac].viewPoint && this.iBeaconInfo[iBeaconMac].viewPoint.length > 50){
-            this.iBeaconInfo[iBeaconMac].viewPoint = this.iBeaconInfo[iBeaconMac].viewPoint.slice(-1,-50);
+        if(rssiDataTable.length){
+            for(let j = 0; j < rawM; j++){
+                let g = {};
+                gatewayMac.slice(0, rawN).forEach((mac, i) => g[mac] = rssiDataTable[i][j]);
+                this.iBeaconInfo[iBeaconMac].gateways.push(g);
+            }   
         }
-
+        if(this.iBeaconInfo[iBeaconMac].gateways.length > ThresholdConfig.LASTPOINT){
+            this.iBeaconInfo[iBeaconMac].gateways = this.iBeaconInfo[iBeaconMac].gateways.slice(-ThresholdConfig.LASTPOINT);
+        }
+        // console.log("last gateways: ", this.iBeaconInfo[iBeaconMac].gateways);
         // console.log("iBeaconInfo", this.iBeaconInfo, "result", viewPointReturn);
-
         return viewPointReturn;
     }
 
@@ -421,4 +461,30 @@ export class LocationService {
         }
     }
 
+    // 指数加权移动平均
+    ewma(iBeaconMac: string){
+        if(!this.iBeaconInfo[iBeaconMac].ewmaLastSol){
+            this.iBeaconInfo[iBeaconMac].ewmaLastSol = this.iBeaconInfo[iBeaconMac].pvaSol.length > 0 ? 
+                this.iBeaconInfo[iBeaconMac].pvaSol[0]: [0., 0.];
+            this.iBeaconInfo[iBeaconMac].ewmaSol = [];
+            this.iBeaconInfo[iBeaconMac].ewmaNum = 1;
+        }else{   
+            this.iBeaconInfo[iBeaconMac].pvaSol.forEach(pva => {
+                let sol = [];
+                pva.forEach((v, i) => {
+                    sol.push(ThresholdConfig.EWMABETA * this.iBeaconInfo[iBeaconMac].ewmaLastSol[i] 
+                        + (1- ThresholdConfig.EWMABETA) * v);
+                })
+                this.iBeaconInfo[iBeaconMac].ewmaLastSol = [...sol];
+                if(this.iBeaconInfo[iBeaconMac].ewmaNum <= ThresholdConfig.EMWAWEIGHTNUM){
+                    this.iBeaconInfo[iBeaconMac].ewmaSol.push(sol.map(x => x/(1 - 
+                        ThresholdConfig.EWMABETA ** this.iBeaconInfo[iBeaconMac].ewmaNum)));
+                        this.iBeaconInfo[iBeaconMac].ewmaNum += 1;
+                }else{
+                    this.iBeaconInfo[iBeaconMac].ewmaSol.push(sol);
+                }
+            })
+        }
+        console.log("ewma: ", this.iBeaconInfo[iBeaconMac].ewmaSol, this.iBeaconInfo[iBeaconMac].pvaSol);
+    }
 }

@@ -6,15 +6,19 @@
 
 export const ThresholdConfig = {
     MODESWITCH: 10,
-    REGIONSWITCH: 10,
+    REGIONSWITCH: 5,
     GATEWAYLOCATIONNUMBER: 3,
     ZEROMODEBASELINERANGE: 5,
     RSSIGRADIENT: 10,
     RSSICHOOSEMORE: -80,
-    CONVOLUTIONLENGTH: 10,
+    CONVOLUTIONLENGTH: 30,
     CONVOLUTIONSTEP: 1,
-    FOOTSTEP: 2,
-    REGIONZOOM: 0.5,
+    FOOTSTEP: 1.5,
+    REGIONZOOM: 1,
+    LASTPOINT: 4,
+    EWMABETA: 0.3,
+    EMWAWEIGHTNUM: -1,
+    GROUPSAVENUM: 50,
 }
 
 export const RSSIKalmanFilterConfig = {
@@ -95,7 +99,7 @@ export const GatewayConfig = {
         mode: 0,
         region: 4,
         A: -62,
-        n: 2,
+        n: 2.5,
     },
 }
 

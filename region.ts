@@ -13,6 +13,7 @@ export class Region {
     private yMax: number;
     private zoom: number;
     private weightMove: boolean;
+    private gatewayMac: string[];
 
     constructor(xMin: number, xMax: number, yMin: number, yMax: number, zoom: number, weightMove: boolean) {
         this.xMin = xMin;
@@ -21,6 +22,7 @@ export class Region {
         this.yMax = yMax;
         this.zoom = zoom;
         this.weightMove = weightMove;
+        this.gatewayMac = [];
     }
 
     regionLimitCoordiantes(coordinates: number[]): number[] {
@@ -35,5 +37,13 @@ export class Region {
             coordinates[1] = this.yMax - this.zoom;
         }
         return coordinates;
+    }
+
+    addGateway(gatewayMac: string){
+        this.gatewayMac.push(gatewayMac);
+    }
+
+    getGateway(){
+        return this.gatewayMac;
     }
 }
