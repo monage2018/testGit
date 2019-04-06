@@ -26,7 +26,7 @@ export function BFGS(fun, gfun, x0: number[][]) {
     while (m < 20) {
       const newf = fun(math.add(x0, math.multiply(rho ** m, dk)).valueOf());
       const oldf = fun(x0);
-      if (newf < (oldf + math.multiply(sigma * rho ** m, math.transpose(gk), dk).valueOf()[0][0])) {
+      if (newf <= (oldf + math.multiply(sigma * (rho ** m), math.transpose(gk), dk).valueOf()[0][0])) {
         mk = m;
         break;
       }

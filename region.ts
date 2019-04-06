@@ -26,17 +26,18 @@ export class Region {
     }
 
     regionLimitCoordiantes(coordinates: number[]): number[] {
+        let coor = [...coordinates];
         if(coordinates[0] < this.xMin) {
-            coordinates[0] = this.xMin + this.zoom;
+            coor[0] = this.xMin + this.zoom * (this.xMax - this.xMin);
         }else if(coordinates[0] > this.xMax) {
-            coordinates[0] = this.xMax - this.zoom;
+            coor[0] = this.xMax - this.zoom * (this.xMax - this.xMin);
         }
         if(coordinates[1] < this.yMin) {
-            coordinates[1] = this.yMin + this.zoom;
+            coor[1] = this.yMin + this.zoom * (this.yMax - this.yMin);
         }else if(coordinates[1] > this.yMax) {
-            coordinates[1] = this.yMax - this.zoom;
+            coor[1] = this.yMax - this.zoom * (this.yMax - this.yMin);
         }
-        return coordinates;
+        return coor;
     }
 
     addGateway(gatewayMac: string){
