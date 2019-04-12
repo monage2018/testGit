@@ -14,8 +14,11 @@ export class Region {
     private zoom: number;
     private weightMove: boolean;
     private gatewayMac: string[];
+    private canGoto: number[];
+    private gotoCoor: object;
 
-    constructor(xMin: number, xMax: number, yMin: number, yMax: number, zoom: number, weightMove: boolean) {
+    constructor(xMin: number, xMax: number, yMin: number, yMax: number, zoom: number, weightMove: boolean, 
+        canGoto: number[], gotoCoor: object) {
         this.xMin = xMin;
         this.xMax = xMax;
         this.yMin = yMin;
@@ -23,6 +26,8 @@ export class Region {
         this.zoom = zoom;
         this.weightMove = weightMove;
         this.gatewayMac = [];
+        this.canGoto = canGoto;
+        this.gotoCoor = gotoCoor;
     }
 
     regionLimitCoordiantes(coordinates: number[]): number[] {

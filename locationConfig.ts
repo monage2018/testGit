@@ -165,20 +165,38 @@ export const RegionConfig = {
         xyLimit: [1.92, 5.11, 1.38, 4.10],
         zoom: ThresholdConfig.REGIONZOOM,
         weightMove: true,
+        canGoto: [3],
+        gotoCoor: {
+            '3': [2.42, 1.18]
+        }
     },
     "2": {
         xyLimit: [-2.54, 1.92, 1.38, 4.10],
         zoom: ThresholdConfig.REGIONZOOM,
         weightMove: true,
+        canGoto: [3],
+        gotoCoor: {
+            '3': [-2.04, 1.18]
+        }
     },
     "3": {
         xyLimit: [-5.11, 5.11, -4.10, 1.38],
         zoom: ThresholdConfig.REGIONZOOM,
         weightMove: false,
+        canGoto: [1, 2, 4],
+        gotoCoor: {
+            '1': [2.42, 1.58],
+            '2': [-2.04, 1.58],
+            '4': [-4.61, -3.9],
+        }
     },
     "4": {
         xyLimit: [-20, 5.11, -4.80, -4.80],
         zoom: 0,
         weightMove: false,
+        canGoto: [3],
+        gotoCoor: {
+            '3': [-4.61, -4.3],
+        }
     },
 }

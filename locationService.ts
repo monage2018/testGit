@@ -168,16 +168,10 @@ export class LocationService {
             } else {
                 nowMode = 1;
             }
-
-
-
             if (this.iBeaconInfo[iBeaconMac].realRegion === undefined) {
                 this.iBeaconInfo[iBeaconMac].realRegion = [];
             }
             this.iBeaconInfo[iBeaconMac].realRegion.push(nowRegion);
-
-
-
 
             // 模式切换
             let modeSwitch1d: boolean = false;
@@ -223,6 +217,10 @@ export class LocationService {
                     this.iBeaconInfo[iBeaconMac].regionContinueNum = 0;
                     regionSwitch = true;
                     console.log("befor delet: ", JSON.stringify(this.iBeaconInfo[iBeaconMac]));
+
+                    // let res = this.regionToRegion([this.iBeaconInfo[iBeaconMac].lastRegion], nowRegion);
+                    // console.log(res);
+
                 } else {
                     this.iBeaconInfo[iBeaconMac].continueRegionId = nowRegion;              
                     nowRegion = this.iBeaconInfo[iBeaconMac].lastRegion;           
@@ -365,18 +363,35 @@ export class LocationService {
                     region: ewmaRegion,
                 }
                 this.iBeaconInfo[iBeaconMac].viewPoint = [[ewmaSolRegionLimit[0], ewmaSolRegionLimit[1]]];
-                viewPointReturn.push([ewmaSolRegionLimit[0], ewmaSolRegionLimit[1]]);
+                // viewPointReturn.push([ewmaSolRegionLimit[0], ewmaSolRegionLimit[1]]);
             }
             let distance = Math.sqrt((ewmaSolRegionLimit[0] - this.iBeaconInfo[iBeaconMac].lastView.point[0]) ** 2
                 + (ewmaSolRegionLimit[1] - this.iBeaconInfo[iBeaconMac].lastView.point[1]) ** 2);
             if (distance > ThresholdConfig.FOOTSTEP || ewmaRegion !== this.iBeaconInfo[iBeaconMac].lastView.region) {
+                let regionPath = [];
+                if(ewmaRegion !== this.iBeaconInfo[iBeaconMac].lastView.region){
+                    let res = this.regionToRegion([[this.iBeaconInfo[iBeaconMac].lastView.region]], ewmaRegion);
+                    res.reduce((a, b) => {
+                        regionPath.push(this.regionInfo[a].gotoCoor[b]);
+                        return b;
+                    })
+                    console.log("region to region: ", res);
+                }
+                console.log('region path: ', regionPath);
+
                 this.iBeaconInfo[iBeaconMac].lastView = {
                     point: [ewmaSolRegionLimit[0], ewmaSolRegionLimit[1]],
                     mode: ewmaMode,
                     region: ewmaRegion,
                 }
+                if(regionPath.length){
+                    regionPath.forEach(x => {
+                        this.iBeaconInfo[iBeaconMac].viewPoint.push(x);
+                    })
+                }
                 this.iBeaconInfo[iBeaconMac].viewPoint.push([ewmaSolRegionLimit[0], ewmaSolRegionLimit[1]]);
-                viewPointReturn.push([ewmaSolRegionLimit[0], ewmaSolRegionLimit[1]]);
+                // viewPointReturn.push([ewmaSolRegionLimit[0], ewmaSolRegionLimit[1]]);
+                console.log('view point return: ',  this.iBeaconInfo[iBeaconMac].viewPoint);
             }
         });
         console.log("d: ", this.iBeaconInfo[iBeaconMac].d);
@@ -390,14 +405,25 @@ export class LocationService {
         this.iBeaconInfo[iBeaconMac].region = [];
         this.iBeaconInfo[iBeaconMac].d = [];
         // console.log("after delet: ", JSON.stringify(this.iBeaconInfo[iBeaconMac]));
+        
 
-        if (!viewPointReturn.length) {
-            if(this.iBeaconInfo[iBeaconMac].viewPoint.length){
-                viewPointReturn = [this.iBeaconInfo[iBeaconMac].viewPoint[this.iBeaconInfo[iBeaconMac].viewPoint.length - 1]];
-            }else {
-                viewPointReturn = [this.iBeaconInfo[iBeaconMac].pvaSol[this.iBeaconInfo[iBeaconMac].pvaSol.length - 1]];
-            }
+        // if (!viewPointReturn.length) {
+        //     if(this.iBeaconInfo[iBeaconMac].viewPoint.length){
+        //         viewPointReturn = [this.iBeaconInfo[iBeaconMac].viewPoint[this.iBeaconInfo[iBeaconMac].viewPoint.length - 1]];
+        //     }else {
+        //         viewPointReturn = [this.iBeaconInfo[iBeaconMac].pvaSol[this.iBeaconInfo[iBeaconMac].pvaSol.length - 1]];
+        //     }
+        // }
+        if(this.iBeaconInfo[iBeaconMac].viewPoint.length) {
+            viewPointReturn = [this.iBeaconInfo[iBeaconMac].viewPoint.shift()];   
+        } else if(this.iBeaconInfo[iBeaconMac].lastView.point.length) {
+            viewPointReturn = [this.iBeaconInfo[iBeaconMac].lastView.point];
         }
+        console.log('view point return length: ', viewPointReturn.length, viewPointReturn,
+        this.iBeaconInfo[iBeaconMac].viewPoint, this.iBeaconInfo[iBeaconMac].lastView);
+
+
+
         if(this.iBeaconInfo[iBeaconMac].viewPoint && this.iBeaconInfo[iBeaconMac].viewPoint.length > ThresholdConfig.GROUPSAVENUM){
             this.iBeaconInfo[iBeaconMac].viewPoint = this.iBeaconInfo[iBeaconMac].viewPoint.slice(-ThresholdConfig.GROUPSAVENUM);
         }
@@ -419,7 +445,7 @@ export class LocationService {
             if (!this.regionInfo[region]) {
                 this.regionInfo[region] = new Region(regionConfig[region].xyLimit[0], regionConfig[region].xyLimit[1],
                     regionConfig[region].xyLimit[2], regionConfig[region].xyLimit[3], regionConfig[region].zoom,
-                    regionConfig[region].weightMove);
+                    regionConfig[region].weightMove, regionConfig[region].canGoto, regionConfig[region].gotoCoor);
             }
         }
     }
@@ -463,5 +489,30 @@ export class LocationService {
     wma(iBeaconMac: string) {
         
 
+    }
+
+
+    regionToRegion(region: number[][], endRegion: number): number[]{
+        let res: number[][] = [];
+        region.forEach(x => {
+            let xGoto: number[] = this.regionInfo[x[x.length-1]].canGoto.filter(a => !x.includes(a));
+            xGoto.forEach(a => {
+                res.push(x.concat(a));
+            });
+        })
+        if (!res.length){
+            return [];
+        }else {
+            let ret: number[] = [];
+            for(let i = 0; i < res.length; i++) {
+                if(res[i][res[i].length-1] === endRegion && res[i].length > ret.length){
+                    ret = [...res[i]];
+                }
+            }
+            if(ret.length){
+                return ret;
+            }
+        }
+        return this.regionToRegion(res, endRegion);
     }
 }
