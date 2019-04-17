@@ -46,17 +46,17 @@ export class LocationService {
         }else{
             let lastGateways = this.iBeaconInfo[iBeaconMac].gateways.map(x => {
                 let g = {};
-                Object.keys(x).filter(v => !gatewayMac.includes(v)).map(v1 => g[v1] = x[v1]);
+                Object.keys(x).filter(v => gatewayMac.indexOf(v) === -1).map(v1 => g[v1] = x[v1]);
                 return g;
             }).reduce((a, b) => {
                 Object.keys(b).forEach(v => a[v] = b[v]);
                 return a;
             });
             gatewayMac = gatewayMac.concat(Object.keys(lastGateways));
-            Object.values(lastGateways).forEach(v => {
+            Object.keys(lastGateways).forEach(v => {
                 let newRssi = [];
                 for(let j = 0; j < rawM; j++){
-                    newRssi.push(v);
+                    newRssi.push(lastGateways[v]);
                 }
                 rssiDataTable.push(newRssi);
             })
@@ -110,7 +110,8 @@ export class LocationService {
             let wd: number[] = A.map((value, i) => {
                 return 1. / 10 ** ((value - rssiKF[i][j]) / 25.);
             })
-            let wdSum = eval(wd.join("+"));
+            // let wdSum = eval(wd.join("+"));
+            let wdSum = wd.reduce((a, b) => a + b);
             let rssiWd: number[] = wd.map((value, i) => {
                 return value / wdSum * rssiKF[i][j];
             });
@@ -371,6 +372,7 @@ export class LocationService {
                 let regionPath = [];
                 if(ewmaRegion !== this.iBeaconInfo[iBeaconMac].lastView.region){
                     let res = this.regionToRegion([[this.iBeaconInfo[iBeaconMac].lastView.region]], ewmaRegion);
+                    console.log([[this.iBeaconInfo[iBeaconMac].lastView.region]], ewmaRegion);
                     res.reduce((a, b) => {
                         regionPath.push(this.regionInfo[a].gotoCoor[b]);
                         return b;
@@ -495,11 +497,12 @@ export class LocationService {
     regionToRegion(region: number[][], endRegion: number): number[]{
         let res: number[][] = [];
         region.forEach(x => {
-            let xGoto: number[] = this.regionInfo[x[x.length-1]].canGoto.filter(a => !x.includes(a));
+            let xGoto: number[] = this.regionInfo[x[x.length-1]].canGoto.filter(a => x.indexOf(a) === -1);
             xGoto.forEach(a => {
                 res.push(x.concat(a));
             });
         })
+        console.log("res：", res);
         if (!res.length){
             return [];
         }else {

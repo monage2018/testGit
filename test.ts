@@ -1,10 +1,11 @@
-import { PVAKalmanFilter } from "./location/kalmanFilter/PVAKalmanFilter";
-import { LossFunction } from "./location/LossFunction";
-import { BFGS } from "./location/QuasiNewton";
-import { LocationService } from "./location/LocationService";
+// import { PVAKalmanFilter } from "./location/kalmanFilter/PVAKalmanFilter";
+// import { LossFunction } from "./location/LossFunction";
+// import { BFGS } from "./location/QuasiNewton";
+// import LocationService = require('corelink-location');
+import * as location from 'corelink-location';
 
 // test LocationService
-let locateService = new LocationService()
+let locateService = new location.LocationService()
 let iBeaconMac = "sssa64";
 let gatewagyMac = ["b4e62d8cd131", "b4e62d8cd0d5", "b4e62d8cd141", "b4e62d8cd16d", "b4e62d8cd0fd", "b4e62d8cd0f1"];
 let RSSIData = [[-89,-89,-89,-89,-89,-89,-89,-89,-88,-88,-88,-88,-88,-88,-88,-88,-88,-88,-88,-88,-88,-88,-88,-88,-88,-88,-88,-88,-88,-88,-88,-88,-88,-88,-88,-88,-88,-88,-88,-88,-88,-88,-88,-88,-74,-74,-74,-74,-74,-75,-75,-75,-75,-75,-75,-75,-72,-67,-67,-69,-69,-66,-66,-67,-67,-67,-67,-67,-68,-68,-60,-68,-66,-69,-69,-67,-67,-67,-67,-67,-67,-67,-67,-67,-67,-67,-59,-67,-67,-67,-68,-67,-67,-66,-67,-67,-67,-67,-67,-66,-66],

@@ -1,8 +1,9 @@
 {
-  "name": "locatealgorithm",
+  "name": "corelink-location",
   "version": "1.0.0",
   "description": "a location algorithm",
-  "main": "./dist/locationService.js",
+  "main": "dist/locationService.js",
+  "types": "loctionService.ts",
   "dependencies": {
     "mathjs": "^5.8.0",
     "typescript": "^3.4.1"
